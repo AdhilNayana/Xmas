@@ -1,0 +1,82 @@
+from flask import Flask, request, render_template_string
+import random
+
+app = Flask(__name__)
+
+# Predefined list of random names
+names_list = ["Adhil", "Amith", "Rose", "Mariya", "Pranav", "Sidharthan", "Ashik", "Leya", "Rohan", "Sreelakshmi"]
+
+# Tracking logic for reserved names & assignments
+reserved_names = set()  # Names entered by a user to reserve
+randomly_assigned_names = {}  # Tracks which user received which name from random generation
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        user_name = request.form.get("name", "").capitalize()
+
+        # Prevent reserved name conflict
+        if user_name in reserved_names:
+            return render_template_string(result_template, user_name=user_name, random_name="Name already reserved!")
+
+        # Allow random name assignment logic
+        available_random_names = [name for name in names_list if name not in randomly_assigned_names.values()]
+        if not available_random_names:
+            return render_template_string(result_template, user_name=user_name, random_name="No names available!")
+
+        # Randomly assign a name to this user
+        assigned_random_name = random.choice(available_random_names)
+
+        # Save reserved name logic only if it's the first-time user reserving their name
+        reserved_names.add(user_name)
+
+        # Map reserved random name assignment
+        randomly_assigned_names[user_name] = assigned_random_name
+
+        # If name conflicts with other users' random assignments, remove it from available use
+        if assigned_random_name in randomly_assigned_names.values():
+            pass  # Keep the random name mapped for uniqueness logic
+
+        return render_template_string(result_template, user_name=user_name, random_name=assigned_random_name)
+
+    return render_template_string(index_template)
+
+
+# HTML Templates
+index_template = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Name Generator</title>
+</head>
+<body>
+    <h1>Welcome to Random Name Assignment!</h1>
+    <form method="POST">
+        <label for="name">Enter your name:</label>
+        <input type="text" id="name" name="name" required>
+        <button type="submit">Reserve & Assign Random Name</button>
+    </form>
+</body>
+</html>
+"""
+
+result_template = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results</title>
+</head>
+<body>
+    <h1>Hello {{ user_name }}!</h1>
+    <p>Your assigned name is: <strong>{{ random_name }}</strong></p>
+    <a href="/">Go back to enter another name</a>
+</body>
+</html>
+"""
+
+if __name__ == "__main__":
+    app.run(debug=True)
